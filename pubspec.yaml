@@ -1,0 +1,53 @@
+name: xxproyecto_777xx
+description: App móvil Flutter para construir y analizar equipos Pokémon competitivos.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP / API
+  http: ^1.2.0
+  dio: ^5.4.0
+
+  # State management
+  provider: ^6.1.2
+
+  # GPS / Maps
+  geolocator: ^11.0.0
+  google_maps_flutter: ^2.6.0
+
+  # Camera / Gallery
+  camera: ^0.10.5+9
+  image_picker: ^1.0.7
+
+  # QR
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.1.0
+
+  # Storage
+  shared_preferences: ^2.2.2
+  path_provider: ^2.1.2
+  path: ^1.9.0
+
+  # UI extras
+  cached_network_image: ^3.3.1
+  fl_chart: ^0.67.0
+  shimmer: ^3.0.0
+  lottie: ^3.1.0
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/animations/

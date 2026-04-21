@@ -20,7 +20,7 @@ class XxProyecto777xX extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeNotifier = context.watch<ThemeNotifier>();
     return MaterialApp(
-      title: 'XxProyecto_777xX',
+      title: 'PokéForge',
       debugShowCheckedModeBanner: false,
       theme: _buildLightTheme(),
       darkTheme: _buildDarkTheme(),

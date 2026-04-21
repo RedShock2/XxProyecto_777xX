@@ -85,7 +85,7 @@ class _SplashScreenState extends State<SplashScreen>
                     _ProfileAvatar(trainer: trainer),
                     const SizedBox(height: 24),
                     const Text(
-                      'XxProyecto_777xX',
+                      'PokéForge',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 28,

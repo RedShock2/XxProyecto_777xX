@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import '../models/team.dart';
 import '../providers/team_provider.dart';
 import '../services/location_service.dart';
+import '../services/preferences_service.dart';
 import '../utils/region_mapper.dart';
 
 class MapScreen extends StatefulWidget {
@@ -13,23 +16,28 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  GoogleMapController? _mapCtrl;
+  final _mapCtrl = MapController();
   final _locationSvc = LocationService();
 
   LatLng? _currentPos;
   bool _loadingPos = true;
   RegionInfo? _region;
-  double _nearbyRadius = 2.0; // km
-  Set<Marker> _markers = {};
-  Set<Circle> _circles = {};
+  double _nearbyRadius = 2.0;
 
   @override
   void initState() {
     super.initState();
+    _loadRadius();
     _initLocation();
   }
 
+  Future<void> _loadRadius() async {
+    final saved = await PreferencesService.getMapRadius();
+    if (mounted) setState(() => _nearbyRadius = saved);
+  }
+
   Future<void> _initLocation() async {
+    setState(() => _loadingPos = true);
     final loc = await _locationSvc.getCurrentLocation();
     if (!mounted) return;
 
@@ -41,65 +49,16 @@ class _MapScreenState extends State<MapScreen> {
         _region = region;
         _loadingPos = false;
       });
-      _buildMarkers();
-      _mapCtrl?.animateCamera(CameraUpdate.newLatLngZoom(pos, 12));
+      _mapCtrl.move(pos, 12);
     } else {
       setState(() => _loadingPos = false);
     }
   }
 
-  void _buildMarkers() {
-    final teams = context.read<TeamProvider>().teams;
-    final markers = <Marker>{};
-    final circles = <Circle>{};
-
-    if (_currentPos != null) {
-      markers.add(Marker(
-        markerId: const MarkerId('me'),
-        position: _currentPos!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        infoWindow: const InfoWindow(title: 'Mi ubicación'),
-      ));
-      circles.add(Circle(
-        circleId: const CircleId('nearby'),
-        center: _currentPos!,
-        radius: _nearbyRadius * 1000,
-        fillColor: Colors.blue.withOpacity(0.1),
-        strokeColor: Colors.blue,
-        strokeWidth: 1,
-      ));
-    }
-
-    for (final team in teams) {
-      if (team.location != null) {
-        final pos = LatLng(team.location!.latitude, team.location!.longitude);
-        markers.add(Marker(
-          markerId: MarkerId('team_${team.id}'),
-          position: pos,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueOrange),
-          infoWindow: InfoWindow(
-            title: team.name,
-            snippet:
-                '${team.pokemonCount} Pokémon • ${team.location!.savedAt.toLocal().toString().substring(0, 10)}',
-          ),
-          onTap: () => Navigator.pushNamed(
-            context,
-            '/team-builder',
-            arguments: team,
-          ),
-        ));
-      }
-    }
-
-    setState(() {
-      _markers = markers;
-      _circles = circles;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final teams = context.watch<TeamProvider>().teams;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mapa GPS'),
@@ -107,23 +66,74 @@ class _MapScreenState extends State<MapScreen> {
           IconButton(
             icon: const Icon(Icons.my_location),
             onPressed: _initLocation,
+            tooltip: 'Mi ubicación',
           ),
         ],
       ),
       body: Stack(
         children: [
           if (_currentPos != null)
-            GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: _currentPos!,
-                zoom: 12,
+            FlutterMap(
+              mapController: _mapCtrl,
+              options: MapOptions(
+                initialCenter: _currentPos!,
+                initialZoom: 12,
               ),
-              onMapCreated: (c) => _mapCtrl = c,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              markers: _markers,
-              circles: _circles,
-              mapType: MapType.normal,
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.xxproyecto.app',
+                ),
+                CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: _currentPos!,
+                      radius: _nearbyRadius * 1000,
+                      useRadiusInMeter: true,
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderColor: Colors.blue,
+                      borderStrokeWidth: 1,
+                    ),
+                  ],
+                ),
+                MarkerLayer(
+                  markers: [
+                    // Marcador de posición actual
+                    Marker(
+                      point: _currentPos!,
+                      width: 40,
+                      height: 40,
+                      child: const Icon(
+                        Icons.location_pin,
+                        color: Color(0xFFCC0000),
+                        size: 40,
+                      ),
+                    ),
+                    // Marcadores de equipos guardados con GPS
+                    ...teams
+                        .where((t) => t.location != null)
+                        .map(
+                          (team) => Marker(
+                            point: LatLng(
+                              team.location!.latitude,
+                              team.location!.longitude,
+                            ),
+                            width: 40,
+                            height: 40,
+                            child: GestureDetector(
+                              onTap: () => _showTeamInfo(context, team),
+                              child: const Icon(
+                                Icons.catching_pokemon,
+                                color: Colors.orange,
+                                size: 36,
+                              ),
+                            ),
+                          ),
+                        ),
+                  ],
+                ),
+              ],
             )
           else if (_loadingPos)
             const Center(child: CircularProgressIndicator())
@@ -146,7 +156,6 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
             ),
-          // Region info card
           if (_region != null)
             Positioned(
               top: 12,
@@ -154,7 +163,6 @@ class _MapScreenState extends State<MapScreen> {
               right: 12,
               child: _RegionCard(region: _region!),
             ),
-          // Radius slider
           Positioned(
             bottom: 16,
             left: 16,
@@ -163,11 +171,58 @@ class _MapScreenState extends State<MapScreen> {
               value: _nearbyRadius,
               onChanged: (v) {
                 setState(() => _nearbyRadius = v);
-                _buildMarkers();
+                PreferencesService.setMapRadius(v);
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showTeamInfo(BuildContext context, Team team) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF16213E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              team.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${team.pokemonCount} Pokémon · '
+              '${team.location!.savedAt.toLocal().toString().substring(0, 10)}',
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/team-builder', arguments: team);
+              },
+              icon: const Icon(Icons.edit),
+              label: const Text('Ver equipo'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFCC0000),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 44),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -199,11 +254,13 @@ class _RegionCard extends StatelessWidget {
                   ),
                   Text(
                     region.game,
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                   Text(
                     region.description,
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 11),
                   ),
                 ],
               ),

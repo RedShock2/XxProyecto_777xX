@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/trainer_provider.dart';
 import '../providers/team_provider.dart';
 import '../services/camera_service.dart';
+import '../services/preferences_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -187,7 +188,10 @@ class _SetupCard extends StatefulWidget {
 }
 
 class _SetupCardState extends State<_SetupCard> {
+  final _formKey = GlobalKey<FormState>();
   final _ctrl = TextEditingController(text: 'Entrenador');
+
+  static final _validName = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9 ]+$');
 
   @override
   void dispose() {
@@ -205,46 +209,60 @@ class _SetupCardState extends State<_SetupCard> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFCC0000).withOpacity(0.5)),
       ),
-      child: Column(
-        children: [
-          const Text(
-            '¿Cuál es tu nombre?',
-            style: TextStyle(color: Colors.white, fontSize: 16),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _ctrl,
-            style: const TextStyle(color: Colors.white),
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white10,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            const Text(
+              '¿Cuál es tu nombre?',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _ctrl,
+              style: const TextStyle(color: Colors.white),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                errorStyle: const TextStyle(color: Color(0xFFFF6B6B)),
               ),
+              validator: (value) {
+                final v = value?.trim() ?? '';
+                if (v.isEmpty) return 'El nombre no puede estar vacío';
+                if (v.length < 3) return 'Mínimo 3 caracteres';
+                if (v.length > 16) return 'Máximo 16 caracteres';
+                if (!_validName.hasMatch(v)) return 'Solo letras, números y espacios';
+                return null;
+              },
             ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _submit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFCC0000),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFCC0000),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('¡Comenzar!',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
-            child: const Text('¡Comenzar!',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
     await context.read<TrainerProvider>().setName(_ctrl.text.trim());
+    await PreferencesService.setSetupDone(true);
     widget.onDone();
   }
 }

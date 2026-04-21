@@ -1,8 +1,20 @@
+/// Representa el perfil del entrenador Pokémon del usuario.
+///
+/// Se persiste localmente mediante Hive a través de [StorageService].
 class Trainer {
+  /// Nombre del entrenador elegido en el setup inicial.
   String name;
+
+  /// Ruta local a la foto de perfil. `null` si no se ha seleccionado foto.
   String? profileImagePath;
+
+  /// Fecha en que el entrenador se registró en la app por primera vez.
   final DateTime joinedAt;
+
+  /// Total de equipos creados por el entrenador.
   int totalTeams;
+
+  /// Total de batallas registradas.
   int totalBattles;
 
   Trainer({
@@ -29,5 +41,6 @@ class Trainer {
     totalBattles: json['totalBattles'] as int? ?? 0,
   );
 
+  /// Crea un entrenador con valores por defecto para el primer lanzamiento.
   factory Trainer.defaultTrainer() => Trainer(name: 'Entrenador');
 }

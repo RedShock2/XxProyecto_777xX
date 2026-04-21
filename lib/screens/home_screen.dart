@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/team_provider.dart';
 import '../providers/trainer_provider.dart';
+import '../providers/theme_notifier.dart';
 import '../models/team.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -46,6 +47,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          Consumer<ThemeNotifier>(
+            builder: (_, theme, __) => IconButton(
+              icon: Icon(
+                theme.mode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+              ),
+              onPressed: theme.toggle,
+              tooltip: 'Cambiar tema',
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.map),
             onPressed: () => Navigator.pushNamed(context, '/map'),

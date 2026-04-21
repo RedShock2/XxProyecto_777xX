@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'providers/theme_notifier.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/search_screen.dart';
@@ -9,20 +11,26 @@ import 'screens/qr_screen.dart';
 import 'models/team.dart';
 
 class XxProyecto777xX extends StatelessWidget {
-  const XxProyecto777xX({super.key});
+  /// Ruta inicial: `/splash` si es primer lanzamiento, `/home` si ya hizo setup.
+  final String initialRoute;
+
+  const XxProyecto777xX({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = context.watch<ThemeNotifier>();
     return MaterialApp(
       title: 'XxProyecto_777xX',
       debugShowCheckedModeBanner: false,
-      theme: _buildTheme(),
-      initialRoute: '/splash',
+      theme: _buildLightTheme(),
+      darkTheme: _buildDarkTheme(),
+      themeMode: themeNotifier.mode,
+      initialRoute: initialRoute,
       onGenerateRoute: _generateRoute,
     );
   }
 
-  ThemeData _buildTheme() {
+  ThemeData _buildDarkTheme() {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -39,6 +47,17 @@ class XxProyecto777xX extends StatelessWidget {
         color: const Color(0xFF16213E),
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      fontFamily: 'Roboto',
+    );
+  }
+
+  ThemeData _buildLightTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFFCC0000),
+        brightness: Brightness.light,
       ),
       fontFamily: 'Roboto',
     );

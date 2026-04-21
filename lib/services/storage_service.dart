@@ -1,9 +1,11 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/team.dart';
 import '../models/trainer.dart';
 
 class StorageService {
+  static const _teamsBox = 'teams';
+  static const _trainerBox = 'trainer';
   static const _teamsKey = 'teams';
   static const _trainerKey = 'trainer';
 
@@ -11,11 +13,11 @@ class StorageService {
   factory StorageService() => _instance;
   StorageService._();
 
-  Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
+  Box<String> get _teams => Hive.box<String>(_teamsBox);
+  Box<String> get _trainer => Hive.box<String>(_trainerBox);
 
   Future<List<Team>> loadTeams() async {
-    final prefs = await _prefs;
-    final raw = prefs.getString(_teamsKey);
+    final raw = _teams.get(_teamsKey);
     if (raw == null) return [];
     final list = jsonDecode(raw) as List<dynamic>;
     return list
@@ -24,22 +26,19 @@ class StorageService {
   }
 
   Future<void> saveTeams(List<Team> teams) async {
-    final prefs = await _prefs;
-    await prefs.setString(
+    await _teams.put(
       _teamsKey,
       jsonEncode(teams.map((t) => t.toJson()).toList()),
     );
   }
 
   Future<Trainer?> loadTrainer() async {
-    final prefs = await _prefs;
-    final raw = prefs.getString(_trainerKey);
+    final raw = _trainer.get(_trainerKey);
     if (raw == null) return null;
     return Trainer.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
   Future<void> saveTrainer(Trainer trainer) async {
-    final prefs = await _prefs;
-    await prefs.setString(_trainerKey, jsonEncode(trainer.toJson()));
+    await _trainer.put(_trainerKey, jsonEncode(trainer.toJson()));
   }
 }
